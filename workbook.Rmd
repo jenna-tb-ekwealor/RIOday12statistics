@@ -1,0 +1,296 @@
+---
+title: "RIO Day 12: Statistics"
+author: "NSF Bay Area Microbiome RaMP"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float:
+      collapsed: true
+  fig_retina: 2
+---
+
+### (1) Welcome
+Welcome to the RIO Day 12 workshop! We will introduce you to foundational statistics and data analysis using R.
+
+Follow along on slides here: https://docs.google.com/presentation/d/1rSXje8xby3ud9a9EiWlYwLaaTW81jHc-xfD41IO4I50/edit?usp=sharing
+
+---
+
+### (2) Icebreaker
+**Task:** In this icebreaker activity, you will interview three classmates and collect data. Please fill in your cohort survey data here:
+
+Fill in your cohort survey data here: 
+https://docs.google.com/spreadsheets/d/1M5XoRXIcGKRkmndYhlKOdsE7nYyKHZUXhdq1AbA_qyc/edit?usp=sharing
+
+---
+
+### (3) Why Statistics?
+(see slideshow link at #1 above)
+
+Statistics plays a crucial role in understanding biological questions. We’ll discuss equity in statistics and the importance of decolonizing data science practices.
+
+What’s one biological question you’d love to answer with data? Dream big!
+
+---
+
+### (4) Data Visualization
+(see slideshow link at #1 above)
+
+We will now cover data visualization to help communicate insights effectively. Good visualizations are essential for making sense of complex datasets.
+
+We’ll explore some visualizations such as bar plots and scatter plots. You can follow along with interactive visualizations at pudding.cool.
+
+pudding.cool links:
+
+---
+
+### (5) RStudio
+
+In this section, we will install **R** and **RStudio**, which are essential tools for our work in data analysis and statistics. You will also get a quick introduction to RStudio’s layout.
+
+First, install R and RStudio on your computer, if you haven’t already. Once installed, we’ll tour the RStudio interface and perform basic operations.
+
+**Instructions**: Run the following code to install the necessary libraries and check that R is working properly.
+
+```{r setup, echo = FALSE, warning = FALSE, message = FALSE}
+# Now, let's load the necessary libraries for this workshop.
+# This will help us perform various tasks like data manipulation, visualization, and statistical analysis.
+# install.packages(c("tidyverse","RColorBrewer","readr","janitor","forcats","broom","palmerpenguins","vegan","ggpubr","rstatix","reshape2"))
+library(tidyverse)
+library(RColorBrewer)
+library(readr)
+library(janitor)
+library(forcats)
+library(broom)
+library(palmerpenguins)
+library(vegan)
+library(ggpubr)
+library(rstatix)
+library(reshape2)
+```
+
+```{r hello-r}
+
+```
+
+---
+
+### (6) Inference Basics
+
+Before diving into hypothesis testing, we need to understand the concept of **distributions** and **normality**. This is the foundation for most statistical tests.
+
+**Task**: Let's visualize the distribution of a dataset (flipper length from the penguins dataset). We will plot histograms and use QQ plots to evaluate normality. Check if the data is normally distributed and test it with the Shapiro-Wilk test.
+
+```{r}
+# Let's perform a t-test to compare the flipper lengths of Adelie and Chinstrap penguins and see if the difference is statistically significant.
+# Let's visualize the distribution of flipper length for the penguins dataset and test its normality.
+
+```
+Sometimes datasets need a little cleaning up, and there are packages for that. Let's clean up the names. 
+```{r normality}
+# clean names
+
+```
+
+To eyeball normality of each group, draw histograms: 
+```{r hists}
+
+```
+Does the distribution appear normal based on the histogram?
+How does the distribution of flipper length vary across species? Does it appear normal for all species?
+
+Filter the dataset for Adelie and Chinstrap penguins and perform a Shapiro test to check for normality. 
+```{r two-groups}
+# focus on two groups for normality examples
+
+
+
+# Run Shapiro-Wilk test for normality 
+
+  
+
+```
+What do the p-values from the Shapiro-Wilk test tell you about the normality of the data for each species?
+
+---
+
+### (7) Hypothesis Testing
+
+In this section, we will introduce **hypothesis testing** using the **t-test**. The t-test compares the means of two groups and helps us determine if the difference is statistically significant.
+
+**Task**: We will test if there is a significant difference between the flipper lengths of **Adelie** and **Chinstrap** penguins. First, let's perform a t-test and interpret the p-value.
+
+```{r}
+# Let's perform a t-test to compare the flipper lengths of Adelie and Chinstrap penguins and see if the difference is statistically significant.
+# Let's visualize the distribution of flipper length for the penguins dataset and test its normality.
+
+
+
+```
+Based on the p-value from the t-test, do you reject or fail to reject the null hypothesis? What does this tell us about the difference in flipper lengths?
+
+---
+
+### (8) ANOVAs
+The **ANOVA** (Analysis of Variance) is an extension of the t-test that compares means across more than two groups. We'll also briefly discuss **PERMANOVA**, a method for comparing groups based on distance matrices.
+**Task**: Let’s compare the flipper lengths of different penguin species using one-way **ANOVA**.
+```{r anova}
+
+
+
+
+```
+What is the p-value from the ANOVA? What does it tell us about the differences in flipper lengths across penguin species?
+
+#### (8a) Boxplot with ANOVA p-values
+
+```{r anova-plot}
+
+
+
+
+```
+
+#### (8b) Posthoc pairwise tests
+```{r anova-annotated}
+
+
+
+
+```
+
+#### (8c) Stacked bar chart (composition)
+```{r stacked-bar}
+
+
+
+
+
+```
+
+#### (8d) PERMANOVA
+```{r permanova}
+
+
+
+
+
+
+```
+
+---
+
+### (9) Correlation & Regression
+
+#### (9a) Correlation
+**Correlation measures** the relationship between two variables. We’ll calculate the **Pearson correlation** between **bill length** and **flipper length**.
+```{r correlation-scatter}
+
+
+
+
+```
+
+```{r correlation}
+
+
+
+
+```
+What does the correlation coefficient tell you about the relationship between bill length and flipper length?
+
+#### (9b) Regression
+**Regression** allows us to predict one variable based on another. In this section, we will perform a **linear regression** to model **flipper length** as a function of **bill length**.
+
+**Task:** Let's fit a regression line and interpret the slope and R².
+```{r regression}
+
+
+
+
+
+
+```
+
+---
+
+### (10) Generalized Linear Models (GLMs)
+**Generalized Linear Models** (GLMs) extend linear regression models to handle binary, count, or other types of outcomes. We’ll introduce **logistic regression** here.
+
+Let’s fit a logistic regression model using **sex** as a **binary outcome**.
+```{r glm-preview, eval=FALSE}
+pg_glm <- pg |>
+  filter(!is.na(sex)) |>
+  mutate(sex = droplevels(sex), sex_bin = ifelse(sex == "male", 1, 0))
+
+glm_fit <- glm(sex_bin ~ bill_length_mm + bill_depth_mm,
+               data = pg_glm, family = binomial)
+summary(glm_fit)
+```
+
+---
+
+### (11) Cohort Data
+In this section, we’ll analyze the cohort survey data you collected earlier. You will clean the data as needed, create visualizations, and perform basic statistical analyses such as hypothesis testing and correlation.
+
+**Task:** Load the data, clean it, and perform the necessary analysis.
+```{r cohort-viz-1}
+
+
+
+
+
+
+```
+
+```{r cohort-viz-2}
+
+
+
+
+
+```
+
+
+```{r cohort-viz-3}
+
+
+
+
+
+```
+
+```{r cohort-test-1}
+
+
+
+
+```
+
+
+```{rcohort-viz-4}
+
+
+
+
+```
+
+
+```{r cohort-viz-5}
+
+
+
+
+
+```
+
+
+---
+
+### (12) Wrap-Up
+**Summary:** We’ve covered a variety of statistical methods, from data visualization to hypothesis testing and regression. Make sure to **choose the appropriate statistical test** for your data, and always visualize first.
+
+After lunch, we will dive into genomic data analysis.
+
+**Great work!**
