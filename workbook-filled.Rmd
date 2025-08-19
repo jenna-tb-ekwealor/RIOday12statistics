@@ -71,13 +71,8 @@ library(reshape2)
 ```
 
 ```{r hello-r}
-x <- 1 + 1
-y <- 3 +3 
-z <- x/y
-pets <- c("cat", "dog", "fish")
-pets
+1 + 1
 ```
-
 
 ---
 
@@ -90,21 +85,28 @@ Before diving into hypothesis testing, we need to understand the concept of **di
 ```{r}
 # Let's perform a t-test to compare the flipper lengths of Adelie and Chinstrap penguins and see if the difference is statistically significant.
 # Let's visualize the distribution of flipper length for the penguins dataset and test its normality.
-
-penguins |> dplyr::filter(species == "Gentoo") |> ggplot(aes(x = flipper_length_mm)) + 
-  geom_histogram(fill = "blue")+ 
+# Example of distribution check using penguins dataset
+penguins |> 
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(fill = '#69b3a2', bins = 20) + 
   labs(title = 'Flipper Length Distribution')
-
 ```
 Sometimes datasets need a little cleaning up, and there are packages for that. Let's clean up the names. 
 ```{r normality}
-shapiro_test(penguins$flipper_length_mm)
-
+# clean names
+pg <- penguins |>
+  janitor::clean_names() |>
+  filter(!is.na(bill_length_mm), !is.na(flipper_length_mm))
 ```
 
 To eyeball normality of each group, draw histograms: 
 ```{r hists}
+hists <- pg |>
+  ggplot(aes(x = flipper_length_mm)) +
+  geom_histogram(fill = "#FC8D62", bins = 20) +
+  facet_wrap(~ species, scales = "free_y")
 
+hists
 ```
 Does the distribution appear normal based on the histogram?
 How does the distribution of flipper length vary across species? Does it appear normal for all species?
@@ -112,13 +114,20 @@ How does the distribution of flipper length vary across species? Does it appear 
 Filter the dataset for Adelie and Chinstrap penguins and perform a Shapiro test to check for normality. 
 ```{r two-groups}
 # focus on two groups for normality examples
+pg2 <- pg |>
+  filter(species %in% c("Adelie","Chinstrap"))
 
+# extract vectors
+adelie    <- pg2 |> filter(species == "Adelie")    |> pull(flipper_length_mm)
+chinstrap <- pg2 |> filter(species == "Chinstrap") |> pull(flipper_length_mm)
 
-
-# Run Shapiro-Wilk test for normality 
-
-  
-
+# Run Shapiro-Wilk test for normality for all data (without sampling)
+pg2 |> 
+  group_by(species) |> 
+  summarise(
+    n = sum(!is.na(flipper_length_mm)),   # Count of non-missing values
+    shapiro_p = shapiro.test(flipper_length_mm)$p.value  # Shapiro-Wilk test for normality
+  )
 ```
 What do the p-values from the Shapiro-Wilk test tell you about the normality of the data for each species?
 
@@ -133,12 +142,9 @@ In this section, we will introduce **hypothesis testing** using the **t-test**. 
 ```{r}
 # Let's perform a t-test to compare the flipper lengths of Adelie and Chinstrap penguins and see if the difference is statistically significant.
 # Let's visualize the distribution of flipper length for the penguins dataset and test its normality.
-
-t.test(y ~ x, data = dataset)
-penguins_subset <- penguins |> dplyr::filter(species != "Gentoo")
+# Example of t-test with penguins dataset
+penguins_subset <- penguins |> filter(species %in% c('Adelie', 'Chinstrap'))
 t.test(flipper_length_mm ~ species, data = penguins_subset)
-
-
 ```
 Based on the p-value from the t-test, do you reject or fail to reject the null hypothesis? What does this tell us about the difference in flipper lengths?
 
@@ -148,47 +154,71 @@ Based on the p-value from the t-test, do you reject or fail to reject the null h
 The **ANOVA** (Analysis of Variance) is an extension of the t-test that compares means across more than two groups. We'll also briefly discuss **PERMANOVA**, a method for comparing groups based on distance matrices.
 **Task**: Let’s compare the flipper lengths of different penguin species using one-way **ANOVA**.
 ```{r anova}
-
-
-
-
+aov_res <- aov(flipper_length_mm ~ species, data = pg)
+summary(aov_res)
 ```
 What is the p-value from the ANOVA? What does it tell us about the differences in flipper lengths across penguin species?
 
 #### (8a) Boxplot with ANOVA p-values
 
 ```{r anova-plot}
+p_base <- pg |>
+  ggplot(aes(x = species, y = flipper_length_mm)) +
+  geom_boxplot(color = "#66C2A5") +
+  labs(title = "Flipper length by species with ANOVA p-value",
+       x = "Species", y = "Flipper length (mm)")
 
+# dynamic placement to avoid clipping
+ylab_top <- max(pg$flipper_length_mm, na.rm = TRUE) + 5
 
-
-
+p_base + stat_compare_means(method = "anova", label.y = ylab_top)
 ```
 
 #### (8b) Posthoc pairwise tests
 ```{r anova-annotated}
+pw <- pg |>
+  tukey_hsd(flipper_length_mm ~ species) |>
+  add_xy_position(x = "species")
 
-
-
-
+p_base +
+  stat_compare_means(method = "anova", label.y = ylab_top) +
+  stat_pvalue_manual(pw, hide.ns = TRUE, tip.length = 0.01) +
+  theme_minimal()
 ```
 
 #### (8c) Stacked bar chart (composition)
 ```{r stacked-bar}
+comp <- pg |>
+  count(island, year, species, name = "abundance") |>
+  group_by(island, year) |>
+  mutate(prop = abundance / sum(abundance)) |>
+  ungroup()
 
-
-
-
-
+comp |>
+  ggplot(aes(x = factor(year), y = prop, fill = species)) +
+  geom_col(position = "fill") +
+  facet_wrap(~ island, nrow = 1) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Species composition per island-year",
+       x = "Year", y = "Proportion")
 ```
 
 #### (8d) PERMANOVA
 ```{r permanova}
+abund_mat <- pg |>
+  count(island, year, species) |>
+  tidyr::pivot_wider(names_from = species, values_from = n, values_fill = 0)
 
+meta <- abund_mat |>
+  select(island, year)
 
+X <- abund_mat |>
+  select(-island, -year) |>
+  as.data.frame()
 
-
-
-
+D <- vegdist(X, method = "bray")
+set.seed(42)
+adonis2(D ~ island, data = meta, permutations = 999)
 ```
 
 ---
@@ -198,17 +228,16 @@ What is the p-value from the ANOVA? What does it tell us about the differences i
 #### (9a) Correlation
 **Correlation measures** the relationship between two variables. We’ll calculate the **Pearson correlation** between **bill length** and **flipper length**.
 ```{r correlation-scatter}
-
-
-
-
+pg |>
+  ggplot(aes(x = bill_length_mm, y = flipper_length_mm)) +
+  geom_point(alpha = 0.8, color = "steelblue") +
+  labs(title = "Flipper length vs bill length",
+       x = "Bill length (mm)", y = "Flipper length (mm)")
 ```
 
 ```{r correlation}
-
-
-
-
+# tidy formula interface
+cor.test(~ bill_length_mm + flipper_length_mm, data = pg, method = "pearson")
 ```
 What does the correlation coefficient tell you about the relationship between bill length and flipper length?
 
@@ -217,12 +246,27 @@ What does the correlation coefficient tell you about the relationship between bi
 
 **Task:** Let's fit a regression line and interpret the slope and R².
 ```{r regression}
+m <- lm(flipper_length_mm ~ bill_length_mm, data = pg)
+sumstats <- summary(m)
 
+regplot <- pg |>
+  ggplot(aes(bill_length_mm, flipper_length_mm)) +
+  geom_point(alpha = 0.9) +
+  geom_smooth(method = "lm", se = FALSE)
 
+r2   <- sumstats$r.squared |> round(3)
+pval <- sumstats$coefficients[2,4] |> signif(3)
 
+ann_pos <- pg |>
+  summarise(x = min(bill_length_mm, na.rm = TRUE) + 1,
+            y = max(flipper_length_mm, na.rm = TRUE) - 1)
 
-
-
+regplot +
+  theme_minimal() +
+  labs(title = "Linear regression of flipper length vs bill length",
+       x = "Bill length (mm)", y = "Flipper length (mm)") +
+  annotate("text", x = ann_pos$x, y = ann_pos$y,
+           label = glue::glue("R^2 = {r2}, p = {pval}"), hjust = 0)
 ```
 
 ---
@@ -231,7 +275,7 @@ What does the correlation coefficient tell you about the relationship between bi
 **Generalized Linear Models** (GLMs) extend linear regression models to handle binary, count, or other types of outcomes. We’ll introduce **logistic regression** here.
 
 Let’s fit a logistic regression model using **sex** as a **binary outcome**.
-```{r glm-preview, eval=FALSE}
+```{r glm-preview}
 pg_glm <- pg |>
   filter(!is.na(sex)) |>
   mutate(sex = droplevels(sex), sex_bin = ifelse(sex == "male", 1, 0))
@@ -248,53 +292,98 @@ In this section, we’ll analyze the cohort survey data you collected earlier. Y
 
 **Task:** Load the data, clean it, and perform the necessary analysis.
 ```{r cohort-viz-1}
+# load cohort data
+cohortdata <- read.csv("cohortdata - data.csv", stringsAsFactors = T)
 
-
-
-
-
-
+# plot
+cohortdata |> 
+  ggplot(aes(x = caffeine, y = sleep, color = transportation)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  stat_cor(method = "pearson", label.x = 2, label.y = 8, color = "black") +   # correlation + p-value
+  scale_color_brewer(palette = "Set2") +
+  labs(title = "Caffeine vs Sleep",
+       x = "Cups of Caffeine per Day",
+       y = "Hours of Sleep")
 ```
 
+
 ```{r cohort-viz-2}
-
-
-
-
+cohortdata |> 
+  mutate(caff_group = if_else(caffeine > 1, ">1 cup", "<=1 cup")) |> 
+  ggplot(aes(x = caff_group, y = sleep, fill = caff_group)) + 
+  geom_boxplot() +
+  stat_compare_means(method = "t.test",
+                     label.x = 2,
+                     label.y = 7.5) +   # adds p-value
+  labs(title = "Hours of Sleep by Caffeine Consumption",
+       x = "Caffeine Consumption Group",
+       y = "Hours of Sleep") +
+  scale_fill_manual(values = c("#8DA0CB", "#E5C494"))
 
 ```
 
 
 ```{r cohort-viz-3}
+# Select numeric variables
+numeric_vars <- cohortdata |> select(caffeine, sleep, distance, plants)
 
+# Calculate Spearman correlation for each pair
+cor_results <- cor(numeric_vars, use = "complete.obs", method = "spearman")
 
+# Reshape the correlation matrix to long format
+cor_results_melt <- melt(cor_results)
 
+# Create heatmap plot
+ggplot(cor_results_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +  
+  geom_text(aes(label = round(value, 2)), color = "black", size = 4) +  # Adding correlation values with adjusted font size
+  scale_fill_gradient2(low = "#E78AC3", high = "#A6D854", mid = "#FFD92F", midpoint = 0) +
+  labs(title = "Correlation Heatmap (Spearman r)",
+       x = "Variables", 
+       y = "Variables") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Rotate x-axis labels for better readability
+  theme_minimal()  # Cleaner background
 
 
 ```
+
 
 ```{r cohort-test-1}
+cohort2 <- cohortdata |> 
+  mutate(caff_group = if_else(caffeine > 1, ">1 cup", "<=1 cup")) |> 
+  filter(!is.na(distance), !is.na(caff_group))
 
+# Perform t-test
+t.test(distance ~ caff_group, data = cohort2)
 
-
+# Perform Spearman correlation
+cor.test(cohortdata$plants, cohortdata$distance, method = "spearman", use = "complete.obs")
 
 ```
-
-
 ```{rcohort-viz-4}
-
-
-
-
+cohortdata |> 
+  ggplot(aes(x = caffeine, y = sleep, color = transportation)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  stat_cor(method = "pearson", label.x = 2, label.y = 8, color = "black") +   # correlation + p-value
+  scale_color_brewer(palette = "Set2") +
+  labs(title = "Caffeine vs Sleep",
+       x = "Cups of Caffeine per Day",
+       y = "Hours of Sleep")
 ```
 
 
 ```{r cohort-viz-5}
-
-
-
-
-
+# Plot 
+cohortdata |> 
+  ggplot(aes(x = pet, fill = transportation)) + 
+  geom_bar(position = "fill") + 
+  labs(title = "Transportation Mode by Pet Ownership",
+       x = "Pet Ownership",
+       y = "Proportion") + 
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Set2")  # Use ColorBrewer Set2 palette
 ```
 
 
